@@ -1,45 +1,56 @@
 #include "opencv2/opencv.hpp"
 #include <iostream>
 
-using namespace std;
-using namespace cv;
 
-int main(int argc, char* argv[]){
+int main(int argc, char *argv[])
+{
 
-  VideoCapture cap(argv[1], cv::CAP_ANY); 
-  if(!cap.isOpened()){
-    cout << "Error opening video stream or file" << endl;
+  cv::VideoCapture cap;
+
+#ifdef WIN32
+  cap.open(argv[1], cv::CAP_DSHOW);
+
+#else
+
+cap.open(argv[1], cv::CAP_V4L2);
+#endif
+
+  if (!cap.isOpened())
+  {
+    std::cout << "Error opening video stream or file" << std::endl;
     return -1;
   }
 
-  while(cap.isOpened()){
-    Mat frame;
+  while (cap.isOpened())
+  {
+    cv::Mat frame;
     // Capture frame-by-frame
     cap >> frame;
 
     // If the frame is empty, break immediately
-    if (frame.empty()){
+    if (frame.empty())
+    {
       break;
     }
 
     // Display the resulting frame
-    imshow( "Frame", frame );
+    cv::imshow("Frame", frame);
 
     // Press  ESC on keyboard to exit
-    char c=(char)waitKey(25);
-    if(c==27){
+    char c = (char)cv::waitKey(25);
+    if (c == 27)
+    {
       break;
     }
   }
 
-  cout << "CAMERA CAIU" << endl;
- 
+  std::cerr << "CAMERA CAIU" << std::endl;
+
   // When everything done, release the video capture object
   cap.release();
 
   // Closes all the frames
-  destroyAllWindows();
-  
-  return 0;
+  cv::destroyAllWindows();
 
+  return 0;
 }
