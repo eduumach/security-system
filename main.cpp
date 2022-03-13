@@ -1,65 +1,85 @@
 #include "opencv2/opencv.hpp"
 #include <iostream>
 
-using namespace std;
-using namespace cv;
+std::vector<cv::Rect> detectCar(cv::Mat frame);
+std::vector<cv::Rect> detectPeople(cv::Mat frame);
+void circleObjects(std::vector<cv::Rect> objects, cv::Mat frame);
 
-void detectAndDisplay( Mat frame );
+cv::CascadeClassifier cascadeClassifier;
 
-CascadeClassifier face_cascade;
+int main(int argc, char *argv[]) {
 
-int main(int argc, char* argv[]){
-
-  //argv[1]
-  VideoCapture cap(argv[1], cv::CAP_ANY); 
-  if(!cap.isOpened()){
-    cout << "Error opening video stream or file" << endl;
-    return -1;
-  }
-  String face_cascade_name = samples::findFile("data/haarcascades/haarcascade_frontalface_default.xml");
-
-  if( !face_cascade.load( face_cascade_name ) )
-  {
-      cout << "--(!)Error loading face cascade\n";
-      return -1;
-  };
-
-  Mat frame;
-  while(cap.read(frame)){
-
-    if (frame.empty()){
-      break;
+    //argv[1]
+    cv::VideoCapture cap(argv[1], cv::CAP_ANY);
+    if (!cap.isOpened()) {
+        std::cout << "Error opening video stream or file" << std::endl;
+        return -1;
     }
 
-    detectAndDisplay(frame);
-    
+    cv::Mat frame;
+    while (cap.read(frame)) {
 
-    char c=(char)waitKey(25);
-    if(c==27){
-      break;
+        if (frame.empty()) {
+            break;
+        }
+
+        std::vector<cv::Rect> objects;
+        std::vector<cv::Rect> cars = detectCar(frame);
+        std::vector<cv::Rect> peoples = detectPeople(frame);
+
+        objects.insert(objects.end(), make_move_iterator(cars.begin()),
+                       make_move_iterator(cars.end()));
+        objects.insert(objects.end(), std::make_move_iterator(peoples.begin()),
+                       std::make_move_iterator(peoples.end()));
+
+        circleObjects(objects, frame);
+
+
+        char c = (char) cv::waitKey(25);
+        if (c == 27) {
+            break;
+        }
     }
-  }
- 
-  cap.release();
 
-  destroyAllWindows();
-  
-  return 0;
+    cap.release();
+
+    cv::destroyAllWindows();
+
+    return 0;
 
 }
 
-void detectAndDisplay(Mat frame){
-  Mat frame_gray;
-  cvtColor(frame, frame_gray, COLOR_BGR2GRAY);
-  equalizeHist(frame_gray, frame_gray);
-  vector<Rect> faces;
-  face_cascade.detectMultiScale(frame_gray, faces);
+std::vector<cv::Rect> detectCar(cv::Mat frame) {
+    cv::String car_cascade = cv::samples::findFile("./cars.xml");
+    if (!cascadeClassifier.load(car_cascade)) {
+        std::cout << "--(!)Error loading face cascade\n";
+    }
+    cv::Mat frame_gray;
+    cvtColor(frame, frame_gray, cv::COLOR_BGR2GRAY);
+    equalizeHist(frame_gray, frame_gray);
+    std::vector<cv::Rect> cars;
+    cascadeClassifier.detectMultiScale(frame_gray, cars);
+    return cars;
+}
 
-  for ( size_t i = 0; i < faces.size(); i++ ){
-    Point center( faces[i].x + faces[i].width/2, faces[i].y + faces[i].height/2 );
-    ellipse( frame, center, Size( faces[i].width/2, faces[i].height/2 ), 0, 0, 360, Scalar( 255, 0, 255 ), 4 );
-    Mat faceROI = frame_gray( faces[i] );
-  }
-  resize(frame,frame, Size(1280,720));
-  imshow( "Frame", frame );
+std::vector<cv::Rect> detectPeople(cv::Mat frame) {
+    cv::String people_cascade = cv::samples::findFile("./haarcascade_fullbody.xml");
+    if (!cascadeClassifier.load(people_cascade)) {
+        std::cout << "--(!)Error loading face cascade\n";
+    }
+    cv::Mat frame_gray;
+    cvtColor(frame, frame_gray, cv::COLOR_BGR2GRAY);
+    equalizeHist(frame_gray, frame_gray);
+    std::vector<cv::Rect> peoples;
+    cascadeClassifier.detectMultiScale(frame_gray, peoples);
+    return peoples;
+}
+
+void circleObjects(std::vector<cv::Rect> objects, cv::Mat frame) {
+    for (auto &face: objects) {
+        cv::Point center(face.x + face.width / 2, face.y + face.height / 2);
+        ellipse(frame, center, cv::Size(face.width / 2, face.height / 2), 0, 0, 360, cv::Scalar(255, 0, 255), 4);
+    }
+    resize(frame, frame, cv::Size(1280, 720));
+    imshow("Frame", frame);
 }
