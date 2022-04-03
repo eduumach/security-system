@@ -1,3 +1,5 @@
 build
 .idea
 cmake-build-debug
+yolov3-tiny.cfg
+yolov3-tiny.weights
